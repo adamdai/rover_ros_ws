@@ -166,6 +166,7 @@ catkin_install_python(PROGRAMS
   nodes/sequence_planner.py
   nodes/nn_planner.py
   nodes/reachability_planner.py
+  nodes/traj_publisher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

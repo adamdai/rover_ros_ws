@@ -3,13 +3,11 @@
 from operator import ge
 import rospy
 import numpy as np
-import time
-import os
 import ros_numpy
 
 from scipy.spatial.transform import Rotation as R
-from geometry_msgs.msg import Point, PoseStamped
-from std_msgs.msg import Float64, Header
+from geometry_msgs.msg import Point
+from std_msgs.msg import Float64
 from sensor_msgs.msg import PointCloud2, PointCloud
 
 from planner.msg import State
@@ -18,13 +16,13 @@ from sensing.lidar_utils import detect_landmark, get_pos_measurement, rotate_poi
 from controller.controller_utils import wrap_angle
 
 
-class Lidar():
-    """Process LiDAR point cloud measurements
+class LidarLMLocalization():
+    """LiDAR-based landmark localization
 
     """
     def __init__(self):
         # Initialize node 
-        rospy.init_node('Lidar', anonymous=True)
+        rospy.init_node('lidar_landmark_localization', anonymous=True)
         self.rate = rospy.Rate(5)  # Same as controller rate
 
         # Class variables
@@ -34,7 +32,7 @@ class Lidar():
 
         # Relative vector from robot to landmark in robot local frame
         # Initialize using robot initial state and landmark position
-        self.landmark_relative_vec = rotate_points(params.LANDMARK_POS - params.X_0[:2], params.X_0[2])
+        self.landmark_relative_vec = rotate_points((params.LANDMARK_POS - params.X_0[:2].flatten())[None,:], params.X_0[2][0]).flatten()
 
         # Publishers
         self.pos_measurement_pub = rospy.Publisher('sensing/lidar/pos_measurement', Point, queue_size=10)
@@ -79,7 +77,7 @@ class Lidar():
     def pointcloud_callback(self, data):
         """Point cloud subscriber callback
 
-        Receive and save point cloud data.
+        Receive point cloud data, detect the landmark, and use it to localize.
 
         """
         P = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(data)
@@ -92,7 +90,7 @@ class Lidar():
 
     
     def publish_measurement(self):
-        """Publish measurement
+        """Publish position measurement
         
         """
         p = Point()
@@ -103,7 +101,7 @@ class Lidar():
 
 
     def run(self):
-        rospy.loginfo("Running Lidar node")
+        rospy.loginfo("Running Lidar localization node")
         while not rospy.is_shutdown():
             
             if self.pos_measurement is not None:
@@ -116,7 +114,7 @@ class Lidar():
 
 
 if __name__ == '__main__':
-    lidar = Lidar()
+    lidar = LidarLMLocalization()
     try:
         lidar.run()
     except rospy.ROSInterruptException:
